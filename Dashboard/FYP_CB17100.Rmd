@@ -1,0 +1,104 @@
+---
+title: "CB17100 FYP Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: row
+    vertical_layout: fill
+    social: ["twitter", "facebook", "menu"]
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(knitr)
+library(DT)
+library(rpivotTable)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(openintro)
+library(highcharter)
+```
+
+
+```{r}
+mydata <- read.csv("C:/Users/muham/Documents/UMP/Sem7/FYP2/Dataset/DataDenggiPahangLatest.csv")
+
+```
+
+```{r}
+mycolors <- c("blue", "#FFC125", "darkgreen", "darkorange")
+
+```
+
+
+Dashboard Denggi Pahang
+==============================
+
+Row
+------------------------------
+
+### Cases in Pahang
+
+```{r}
+
+valueBox(paste("Cases in Pahang according by Districts"),
+         color = "warning")
+
+```
+
+### Total Cases 
+
+```{r}
+
+valueBox(length(mydata$Location),
+         icon = "fa-user")
+
+```
+
+### Total Cases in Cameron
+
+```{r}
+
+valueBox(sum(mydata$District == "Cameron Highlands"),
+         icon = "fa-building")
+
+```
+
+### Total Cases in Lipis
+
+```{r}
+
+valueBox(sum(mydata$District == "Lipis"),
+         icon = "fa-building")
+
+```
+
+### Total Cases in Raub
+
+```{r}
+
+valueBox(sum(mydata$District == "Raub"),
+         icon = "fa-building")
+```
+
+New Row
+---------------------------
+
+
+### Cases by Districts
+
+```{r}
+
+p1 <- mydata %>%
+        group_by(District) %>%
+        summarise(count = n()) %>%
+        plot_ly(x = ~District,
+                y = ~count,
+                color = "orange",
+                type = 'bar') %>%
+  layout(xaxis = list(),
+         yaxis = list(title = 'Count'))
+
+p1
+                
+```
