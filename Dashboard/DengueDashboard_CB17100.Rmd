@@ -1,0 +1,397 @@
+---
+title: "Interactive Dashboard for Dengue Cases in Pahang"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: flatly
+    orientation: rows
+    vertical_layout: fill
+    social: ["twitter", "facebook", "menu"]
+---
+
+<!-- Author: MUHAMMAD KHAIRUL SYAFIQ BIN MUSTAFA -->
+
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(knitr)
+library(DT)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(openintro)
+library(highcharter)
+library(ggvis)
+library(geojsonio)
+library(sf)
+library(cartography)
+library(leaflet)
+library(sf)
+library(tidyverse)
+library(haven)
+library(fpp2)
+library(lubridate)
+library(nnet)
+library(forecast)
+library(tseries)
+library(gganimate)
+```
+
+```{r}
+
+mydata <- read.csv("C:/Users/muham/Documents/UMP/Sem7/FYP2/Dataset/DataDenggiPahangLatest.csv")
+
+mydata2 <- read.csv("C:/Users/muham/Documents/UMP/Sem7/FYP2/Dataset/death.csv")
+
+mydata3 <- read.csv("C:/Users/muham/Documents/UMP/Sem7/FYP2/Dataset/GeneralData.csv")
+
+mydata4 <- read.csv("C:/Users/muham/Documents/UMP/Sem7/FYP2/Dataset/CasesbyLocation.csv") 
+
+mydata5 <- read.csv("C:/Users/muham/Documents/UMP/Sem7/FYP2/Dataset/DataDenggiPahang2020.csv")
+
+mydata6 <- read.csv("C:/Users/muham/Documents/UMP/Sem7/FYP2/Dataset/DataDenggiPahang2021.csv")
+
+myresult <- read.csv("C:/Users/muham/Documents/UMP/Sem7/FYP2/Result/result.csv")
+
+```
+
+```{r}
+
+mycolors <- c("green", "#FFC125", "darkgreen", "darkorange")
+```
+
+Main Page
+===================================
+
+Row 
+-----------------------------------
+
+
+### All data retrieved on Jabatan Kesihatan Negeri Pahang Facebok Page
+
+```{r}
+valueBox(paste("Total Dengue Cases in Pahang from June 2020 to January 2021"),
+          color = "warning")
+
+```
+
+-----------------------------------------------------------------------
+
+### **Total Cases**
+
+```{r}
+valueBox(length(mydata$District)
+         , color = "black")
+```
+
+### **Total Cases in 2020**
+
+```{r}
+valueBox(length(mydata5$District)
+         , color = "lightcoral")
+```
+
+### **Total Cases in 2021**
+
+```{r}
+valueBox(length(mydata6$District)
+         , color = "mediumseagreen")
+```
+
+### **Total Death**
+
+```{r}
+valueBox(length(mydata2$Death)
+         , color = "darkred")
+```
+
+Row {data-height=650}
+------------------------------------------------------------------------
+
+### Cases by District
+```{r}
+p1 <- mydata %>%
+          group_by(District) %>%
+          summarise(count = n()) %>%
+          plot_ly(x = ~District,
+                 y = ~count,
+                 color = "orange",
+                 type = 'bar') %>%
+layout(xaxis = list(),
+yaxis = list(title = 'Count'))
+p1
+                  
+```
+
+### Districts that reach 100 cases and above
+```{r}
+p2 <- mydata %>%
+          group_by(District) %>%
+          summarise(count = n()) %>%
+          filter(count>100) %>%
+          plot_ly(labels= ~District,
+                 values = ~count,
+                 marker = list(colors = mycolors)) %>%
+          add_pie(hole = 0.2) %>%
+          layout(xaxis = list(zeroline = F,
+                              showline = F,
+                              showticklabels = F,
+                              showgrid = F),
+                 yaxis = list(zeroline = F,
+                              showline = F,
+                              showticklabels = F,
+                              showgrid = F))
+p2
+                  
+```
+
+Row {data-height=900}
+---------------------------------------
+
+### Time plot 
+```{r}
+
+datenew <- mydata3 %>%
+  mutate(Date = dmy(Date))
+
+p4 <-datenew %>% group_by(Date) %>%
+     ggplot(aes(x = Date, y = Total.Cases)) +
+     geom_line(color = 'red') +
+     geom_point(size = 1.5) +
+     theme_bw() +
+     ggtitle('Weekly Dengue Cases from June 2020 to January 2021')
+     
+
+p4               
+```
+
+Map
+============================================
+
+### Map
+
+```{r}
+
+mydata <- mydata %>% mutate(popup_info = paste(Location, "<br/>", District, "<br/>"))
+
+colors <- c("green", "red")
+
+pal <- colorFactor(colors, mydata4$Total.Cases)
+
+map <- leaflet()%>%
+  addTiles() %>%
+  addCircleMarkers(data=mydata, 
+                   lat = ~Lat,
+                   lng = ~Long, 
+                   popup = ~popup_info, 
+                   color = ~pal(mydata4$Total.Cases)) 
+
+
+map 
+
+```
+
+Future Dengue Cases 
+============================================
+
+```{r}
+
+
+dataForecast <- mydata3 %>%
+  mutate(Date = dmy(Date))
+# 
+numberofCases <- ts(dataForecast[,2], start = c(2020,6,22), frequency = 34)
+# 
+# 
+# p4 <- autoplot(numberofCases) + 
+#   ggtitle("Current: Dengue Cases in 2020") +
+#   ylab("Number of Cases")
+# 
+# 
+# #DY <- diff(numberofCases)
+# 
+# # p5 <- autoplot(DY) + 
+# #   ggtitle("Changes of Dengue Cases in 2020") +
+# #   ylab("Number of Cases")
+# # 
+# # p5
+# 
+# #adf.test(numberofCases)
+# 
+#ARIMA
+fit_arima <- Arima(numberofCases, c(5, 1, 0), include.drift = TRUE )
+# 
+# #print(summary(fit_arima))
+# #checkresiduals(fit_arima)
+# #residue 12.4
+# 
+ fcst <- forecast(fit_arima, h=68)
+# 
+ p6 <- autoplot(fcst)
+#print(summary(fcst))
+#checkresiduals(fcst)
+```
+
+Row
+------------------------------------------------------------------------
+
+### The current trend of dengue cases
+```{r}
+p4
+```
+
+### The next 2 years trend of dengue cases
+```{r}
+p6
+```
+
+Row
+------------------------------------------------------------------------
+
+### The result of model validation using RMSE
+```{r}
+datatable(myresult,
+          caption = "Comparison between the best-six ARIMA models",
+          style = "default") %>%
+  formatStyle('ARIMA_5_1_0_with_drift', color = 'white', backgroundColor = 'green', fontWeight = 'bold')
+
+```
+
+Data Table
+========================================
+
+```{r}
+datatable(mydata,
+          caption = "Dengue Data",
+          rownames = T,
+          filter = "top",
+          options = list(pageLength = 25))
+```
+
+Summary {data-orientation=columns} 
+===========================================
+
+Column 
+-----------------------------------
+
+### **Cases in Cameron Highlands**
+
+```{r}
+
+valueBox(sum(mydata$District == "Cameron Highlands"),
+         color = "#a2bfcc")
+
+```
+
+
+### **Cases in Lipis**
+
+```{r}
+
+valueBox(sum(mydata$District == "Lipis"),
+         color = "#4fb08f")
+```
+
+### **Cases in Raub**
+
+```{r}
+
+valueBox(sum(mydata$District == "Raub"),
+         color = "#bfc45a")
+```
+
+### **Cases in Jerantut**
+
+```{r}
+
+valueBox(sum(mydata$District == "Jerantut"),
+         color = "#d8d227")
+```
+
+### **Cases in Bentong**
+
+```{r}
+
+valueBox(sum(mydata$District == "Bentong"),
+         color = "#0985c6")
+```
+
+### **Cases in Temerloh**
+
+```{r}
+
+valueBox(sum(mydata$District == "Temerloh"),
+         color = "#9f3931")
+```
+
+
+### **Cases in Bera**
+
+```{r}
+
+valueBox(sum(mydata$District == "Bera"),
+         color = "#dfba21")
+```
+
+### **Cases in Maran**
+
+```{r}
+
+valueBox(sum(mydata$District == "Maran"),
+         color = "#b4112d")
+```
+
+Column
+---------------------------
+
+### **Cases in Kuantan**
+
+```{r}
+
+valueBox(sum(mydata$District == "Kuantan"),
+         color = "crimson")
+```
+
+### **Cases in Pekan**
+
+```{r}
+
+valueBox(sum(mydata$District == "Pekan"),
+         color = "#995a85")
+```
+
+### **Cases in Rompin**
+
+```{r}
+
+valueBox(sum(mydata$District == "Rompin"),
+         color = "#604b5b")
+```
+
+### **Total Cases in Pahang**
+
+```{r}
+valueBox(length(mydata$District)
+         , color = "black")
+```
+
+### **Total Death**
+
+```{r}
+valueBox(length(mydata2$Death)
+         , color = "darkred")
+```
+
+Column
+---------------------------
+
+**_Report_**
+
+Data was took from Official Facebook Page of Jabatan Kesihatan Negeri Pahang
+
+[JKN Pahang Facebook](https://www.facebook.com/jknphg/)
+
+
+
+
+
+_This report was generated on `r format(Sys.Date(), format = "%B %d, %Y")`._
